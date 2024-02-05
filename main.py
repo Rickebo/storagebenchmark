@@ -137,7 +137,20 @@ def run_benchmark(directory: str, options: argparse.Namespace):
     elapsed_write = 0
     elapsed_read = 0
 
-    for _ in range(options.iterations):
+    print_format = '\rRunning benchmark: %s (%s / %s)\033[K'
+    sys.stdout.write(print_format % ('0%', '0', '0'))
+    sys.stdout.flush()
+
+    for iteration in range(options.iterations):
+        progress = (100 * iteration) / options.iterations
+        sys.stdout.write(print_format % (
+            f'{progress:.2f}%',
+            iteration,
+            options.iterations
+        ))
+
+        sys.stdout.flush()
+
         files = set()
         pre_write = time.time()
         write_hash = write(directory, options, files)
@@ -156,6 +169,12 @@ def run_benchmark(directory: str, options: argparse.Namespace):
 
         for file in files:
             os.remove(file)
+
+    sys.stdout.write(print_format % (
+        f'100%',
+        options.iterations,
+        options.iterations
+    ))
 
     total_size = options.size * options.count
 
