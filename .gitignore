@@ -1,0 +1,85 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+.project
+.pydevproject
+.settings/
+git-ssh
+git-ssh.pub
+env/
+build/
+develop-eggs/
+dist/
+eggs/
+lib64/
+parts/
+sdist/
+var/
+Pipfile
+Pipfile.lock
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+find
+jenkins-test
+jenkins-test-equipment
+nosetests
+python
+rm
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+
+test_report
+test_report.html
+pylint_output.txt
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+
+# Sphinx documentation
+docs/_build/
+docs/en/generated/
+*~
+*.backup
+*.ini
+!test/conf/*.ini
+!test/conf/*.default
+!test/conf/*.spec
+TAGS
+\#
+*#
+.#*
+
+# Project files
+.cproject
+.vscode
+docs/generated
+docs/build
+.env
+
+# wxFormBuilder Backups
+*.fbp.bak
+
+# GitHook
+# .pre-commit-config.yaml
+githookstuff/
