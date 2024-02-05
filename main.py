@@ -65,7 +65,7 @@ def parse_args():
     return parser.parse_args(sys.argv[1:])
 
 
-def write(directory: str, options: argparse.Namespace):
+def write(directory: str, options: argparse.Namespace, files_written: set[str]):
     final_hash = bytes(20)
     for i in range(options.count):
         path = os.path.join(directory, f'{i}.bin')
@@ -76,6 +76,7 @@ def write(directory: str, options: argparse.Namespace):
         to_write = options.size
         inner_hash = hashlib.sha1()
         with open(path, 'wb') as file:
+            files_written.add(path)
             while to_write > 0:
                 num_bytes = min(to_write, options.buffer_size)
                 file_content = os.urandom(num_bytes)
@@ -130,31 +131,42 @@ def run_benchmark(directory: str, options: argparse.Namespace):
     if options.empty:
         clear(directory)
 
-    write_hash = set()
-    read_hash = set()
+    write_hashes = set()
+    read_hashes = set()
 
     elapsed_write = 0
     elapsed_read = 0
 
     for _ in range(options.iterations):
+        files = set()
         pre_write = time.time()
-        write_hash.add(write(directory, options))
+        write_hash = write(directory, options, files)
         post_write = time.time()
 
         pre_read = time.time()
-        read_hash.add(read(directory, options))
+        read_hash = read(directory, options)
         post_read = time.time()
 
         elapsed_read += post_read - pre_read
         elapsed_write += post_write - pre_write
+
+        if read_hash != write_hash:
+            write_hashes.add(write_hash)
+            read_hashes.add(read_hash)
+
+        for file in files:
+            os.remove(file)
 
     total_size = options.size * options.count
 
     write_speed, write_unit = format(total_size / elapsed_write)
     read_speed, read_unit = format(total_size / elapsed_read)
 
-    print(f'Write hash: {", ".join(write_hash)}')
-    print(f'Read hash:  {", ".join(read_hash)}')
+    if write_hashes or read_hashes:
+        print('Mismatching hashes:')
+        print(f'    Write hash: {", ".join(write_hashes)}')
+        print(f'     Read hash: {", ".join(read_hashes)}')
+
     print(f'')
     print(f'Total times:')
     print(f'    Write: {elapsed_write:.2f} s')
