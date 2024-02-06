@@ -13,8 +13,8 @@ def parse_args():
         '-s',
         help='Size of the temporary files written/read during testing',
         dest='size',
-        type=int,
-        default=1024
+        type=parse_size,
+        default='4kib'
     )
 
     parser.add_argument(
@@ -49,8 +49,8 @@ def parse_args():
         '-b',
         help='Read/write buffer size',
         dest='buffer_size',
-        type=int,
-        default=1024
+        type=parse_size,
+        default='4kib'
     )
 
     parser.add_argument(
@@ -60,6 +60,14 @@ def parse_args():
         dest='iterations',
         type=int,
         default=10
+    )
+
+    parser.add_argument(
+        '--write-once',
+        '-wo',
+        help='Write files only once',
+        dest='write_once',
+        action='store_true'
     )
 
     return parser.parse_args(sys.argv[1:])
@@ -95,7 +103,7 @@ def read(directory: str, options: argparse.Namespace) -> str:
     final_hash = bytes(20)
     for file_name in os.listdir(directory):
         inner_hash = hashlib.sha1()
-        with open(os.path.join(directory, file_name), 'rb') as file:
+        with open(os.path.join(directory, file_name), 'rb', buffering=0) as file:
             while data := file.read(options.buffer_size):
                 inner_hash.update(data)
 
@@ -127,6 +135,29 @@ def format(number):
     raise ValueError('Invalid number passed.')
 
 
+def parse_size(text: str) -> int:
+    text = text.lower()
+    formats = [
+        (1000 ** 4, 'tb'),
+        (1024 ** 4, 'tib'),
+        (1000 ** 3, 'gb'),
+        (1024 ** 3, 'gib'),
+        (1000 ** 2, 'mb'),
+        (1024 ** 2, 'mib'),
+        (1000, 'kb'),
+        (1024, 'kib'),
+        (1, 'b')
+    ]
+
+    for size, unit in formats:
+        if not text.endswith(unit):
+            continue
+
+        return int(float(text[:-len(unit)]) * size)
+
+    return int(text)
+
+
 def run_benchmark(directory: str, options: argparse.Namespace):
     if options.empty:
         clear(directory)
@@ -141,6 +172,9 @@ def run_benchmark(directory: str, options: argparse.Namespace):
     sys.stdout.write(print_format % ('0%', '0', '0'))
     sys.stdout.flush()
 
+    write_hash = None
+
+    files = set()
     for iteration in range(options.iterations):
         progress = (100 * iteration) / options.iterations
         sys.stdout.write(print_format % (
@@ -151,24 +185,32 @@ def run_benchmark(directory: str, options: argparse.Namespace):
 
         sys.stdout.flush()
 
-        files = set()
-        pre_write = time.time()
-        write_hash = write(directory, options, files)
-        post_write = time.time()
+        if write_hash is None or not options.write_once:
+            pre_write = time.time()
+            write_hash = write(directory, options, files)
+            post_write = time.time()
+            elapsed_write += post_write - pre_write
 
         pre_read = time.time()
         read_hash = read(directory, options)
         post_read = time.time()
 
         elapsed_read += post_read - pre_read
-        elapsed_write += post_write - pre_write
 
         if read_hash != write_hash:
             write_hashes.add(write_hash)
             read_hashes.add(read_hash)
 
-        for file in files:
-            os.remove(file)
+        if not options.write_once:
+            for file in files:
+                os.remove(file)
+
+            files.clear()
+
+    for file in files:
+        os.remove(file)
+
+    files.clear()
 
     sys.stdout.write(print_format % (
         f'100%',
